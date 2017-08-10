@@ -1,1 +1,282 @@
+#!/usr/bin/env python
+# coding: iso-8859-1
+
+
+# code fragments taken from:
+# http://minimaxir.com/2015/07/facebook-scraper/
+# https://github.com/minimaxir/facebook-page-post-scraper
+# https://github.com/minimaxir/facebook-page-post-scraper/blob/master/examples/how_to_build_facebook_scraper.ipynb
+# https://developers.facebook.com/docs/graph-api
+
+
+import urllib2
+import json
+import datetime
+import csv
+import time
+
+# store app id and secret to build access token
+# id and secret can be obtained via facebook developer account
+app_id = ""
+app_secret = ""
+
+# build access token
+access_token = app_id + "|" + app_secret
+
+
+
+# functions dealing with page data
+def getFacebookPageData(page_id, access_token):
+    # constructs page URL, access server, download and return the data
+
+    # construct the URL string
+    base = "https://graph.facebook.com/v2.9"
+    # pass the node we want to access in this case its the page itself
+    node = "/" + page_id
+    # pass the fields we want from the server
+    parameters = "/?fields=name,about,category,emails,general_info,link,single_line_address,location," \
+                 "rating_count,talking_about_count,website,were_here_count,impressum,public_transit,products," \
+                 "description,founded" \
+                 "&access_token=%s" % access_token
+    url = base + node + parameters
+
+    # retrieve data
+    data = json.loads(request_until_succeed(url))
+
+    return data
+
+def processFacebookPageData(page_id,access_token):
+    # process and sort the data for the fields of interest
+
+    # get data from server
+    data = getFacebookPageData(page_id,access_token)
+
+    # prepare data and store fields we are interested in
+    id = data['id']
+    name = checkExistence(data, 'name').encode('utf-8')
+    about = checkExistence(data, 'about').encode('utf-8')
+    general_info = checkExistence(data,'general_info').encode('utf-8')
+    description = checkExistence(data, 'description').encode('utf-8')
+    founded = checkExistence(data,'founded').encode('utf-8')
+    city = checkExistence(data, 'city').encode('utf-8')
+    country = checkExistence(data, 'country').encode('utf-8')
+    latitude = checkExistence(data, 'latitude').encode('utf-8')
+    longitude = checkExistence(data, 'longitude').encode('utf-8')
+    street = checkExistence(data, 'street').encode('utf-8')
+    zipcode = checkExistence(data, 'zipcode').encode('utf-8')
+    impressum = checkExistence(data, 'impressum').encode('utf-8')
+    public_transit = checkExistence(data, 'public_transit').encode('utf-8')
+    products = checkExistence(data, 'products').encode('utf-8')
+    single_line_address = checkExistence(data, 'single_line_address').encode('utf-8')
+    link = checkExistence(data, 'link').encode('utf-8')
+    website = checkExistence(data, 'website').encode('utf-8')
+    emails = str(checkExistence(data, 'emails'))
+    category = checkExistence(data, 'category').encode('utf-8')
+    rating_count = 0 if 'rating_count' not in data.keys() else data['rating_count']
+    talking_about_count = 0 if 'talking_about_count' not in data.keys() else data['talking_about_count']
+    were_here_count = 0 if 'talking_about_count' not in data.keys() else data['talking_about_count']
+
+    # return processed data
+    return (id, name, about, general_info, description, founded, city, country, latitude, longitude, street, zipcode,
+            founded, impressum, public_transit, products, single_line_address, link, website, emails, category,
+            rating_count, talking_about_count, were_here_count)
+
+# functions dealing with feed data
+def getFacebookPageFeedData(page_id, access_token, num_statuses):
+    # constructs page URL, access server, download and return the data
+    base = "https://graph.facebook.com"
+    # pass the node we want to access in this case its the feed node of the page
+    node = "/" + page_id + "/feed"
+    # pass the fields we want from the server
+    parameters = "/?fields=message,link,created_time,type,name,id,likes.limit(1).summary(true)," \
+                 "comments.limit(1).summary(true),reactions.limit(1).summary(true),shares,description," \
+                 "message_tags,parent_id,place,source,status_type,to,updated_time&limit=%s&access_token=%s"\
+                 % (num_statuses, access_token)  # changed
+    url = base + node + parameters
+
+    # retrieve data
+    data = json.loads(request_until_succeed(url))
+
+    return data
+
+def processFacebookPageFeedStatus(status):
+    # process and sort the data for the fields of interest
+
+    status_id = status['id']
+    status_message = 'NA' if 'message' not in status.keys() else status['message'].encode('utf-8')
+    #status_message_tags = 'NA' if 'message_tags' not in status.keys() else status['message_tags']['name'].encode('utf-8')
+    status_description = 'NA' if 'description' not in status.keys() else status['description'].encode('utf-8')
+    place = 'NA' if 'place' not in status.keys() else status['place']['name'].encode('utf-8')
+    #status_to = 'NA' if 'to' not in status.keys() else status['to']['name'].encode('utf-8')
+    link_name = 'NA' if 'name' not in status.keys() else status['name'].encode('utf-8')
+    type = 'NA' if 'type' not in status.keys() else status['type'].encode('utf-8')
+    status_type = 'NA' if 'status_type' not in status.keys() else status['status_type'].encode('utf-8')
+    source = 'NA' if 'source' not in status.keys() else status['source'].encode('utf-8')
+    status_link = 'NA' if 'link' not in status.keys() else status['link'].encode('utf-8')
+    parent_id = 'NA' if 'parent_id' not in status.keys() else status['parent_id'].encode('utf-8')
+
+    # take care of the time as in https://github.com/minimaxir/facebook-page-post-scraper
+    status_published = datetime.datetime.strptime(status['created_time'], '%Y-%m-%dT%H:%M:%S+0000')
+    status_published = status_published + datetime.timedelta(hours=-5)  # EST
+    status_published = status_published.strftime('%Y-%m-%d %H:%M:%S')  # best time format for spreadsheet programs
+
+    updated_time = datetime.datetime.strptime(status['updated_time'], '%Y-%m-%dT%H:%M:%S+0000')
+    updated_time = updated_time + datetime.timedelta(hours=-5)  # EST
+    updated_time = updated_time.strftime('%Y-%m-%d %H:%M:%S')  # best time format for spreadsheet programs
+
+    status_reactions = 0 if 'reactions' not in status.keys() else status['reactions']['summary']['total_count']
+    num_likes = 0 if 'likes' not in status.keys() else status['likes']['summary']['total_count']
+    num_comments = 0 if 'comments' not in status.keys() else status['comments']['summary']['total_count']
+    num_shares = 0 if 'shares' not in status.keys() else status['shares']['count']
+
+    # return processed data
+    return (status_id, status_message, status_description, place,
+            type, status_type, link_name, source, status_link,
+            status_published, updated_time, status_reactions, num_likes, num_comments, num_shares, parent_id)
+
+def scrapeFacebookPageFeedStatus(page_id, access_token):
+    # need to perform paging as described in https://github.com/minimaxir/facebook-page-post-scraper
+    # Query each page of Facebook Page Statuses (100 statuses per page) using getFacebookPageFeedData.
+    # Process all statuses on that page using processFacebookPageFeedStatus and writing the output to a CSV file.
+    # Navigate to the next page, and repeat until no more statuses
+    # This block implements both the writing to CSV and page navigation.
+
+    with open('%s_facebook_statuses.csv' % page_id, 'wb') as file:
+        w = csv.writer(file)
+        w.writerow(["status_id", "status_message", "status_description", "place",
+        "type", "status_type", "link_name", "source", "status_link",
+        "status_published", "updated_time", "status_reactions", "num_likes", "num_comments", "num_shares", "parent_id"])
+
+        has_next_page = True
+        num_processed = 0  # keep a count on how many we've processed
+        scrape_starttime = datetime.datetime.now()
+
+        print "Scraping %s Facebook Page: %s\n" % (page_id, scrape_starttime)
+
+        statuses = getFacebookPageFeedData(page_id, access_token, 100)
+        return_statuses = []
+        while has_next_page:
+            for status in statuses['data']:
+                w.writerow(processFacebookPageFeedStatus(status))
+                return_statuses.append(status)
+                # output progress occasionally to make sure code is not stalling
+                num_processed += 1
+                if num_processed % 1000 == 0:
+                    print "%s Statuses Processed: %s" % (num_processed, datetime.datetime.now())
+
+            # if there is no next page, we're done.
+            if 'paging' in statuses.keys():
+                if 'next' in statuses['paging'].keys():
+                    statuses = json.loads(request_until_succeed(statuses['paging']['next']))
+                else:
+                    has_next_page = False
+            else:
+                has_next_page = False
+
+        print "\nDone!\n%s Statuses Processed in %s" % (num_processed, datetime.datetime.now() - scrape_starttime)
+        return return_statuses
+
+# functions dealing with liked pages of pages
+def getLikedPagesOfPage(page_id, access_token, num_likes):
+    # construct the URL string
+    base = "https://graph.facebook.com/v2.9"
+    # access the page node itself
+    node = "/" + page_id
+    # the fields we want to get from the server
+    parameters = "/?fields=likes&limit=%s&access_token=%s"\
+                 % (num_likes, access_token)
+    url = base + node + parameters
+
+    # retrieve data
+    data = json.loads(request_until_succeed(url))
+
+    return data
+
+def scrapeLikedPagesOfPage(page_id, access_token):
+    # need to perform paging as described in https://github.com/minimaxir/facebook-page-post-scraper
+    # Query each page of Facebook Page Statuses (100 statuses per page) using getFacebookPageFeedData.
+    # Process all statuses on that page using processFacebookPageFeedStatus and writing the output to a CSV file.
+    # Navigate to the next page, and repeat until no more statuses
+    # This block implements both the writing to CSV and page navigation.
+    with open('%s_facebook_liked_pages.csv' % page_id, 'wb', encoding='utf-8') as file:
+        w = csv.writer(file)
+        w.writerow(['id','name', 'about', 'general_info', 'description', 'founded', 'city', 'country', 'latitude', 'longitude', 'street', 'zipcode',
+            'founded', 'impressum', 'public_transit', 'products', 'single_line_address', 'link', 'website', 'emails', 'category',
+            'rating_count', 'talking_about_count', 'were_here_count'])
+
+        has_next_page = True
+        num_processed = 0  # keep a count on how many we've processed
+        scrape_starttime = datetime.datetime.now()
+
+        print "Scraping %s Facebook Page: %s\n" % (page_id, scrape_starttime)
+
+        pages = getLikedPagesOfPage(page_id, access_token, 100)
+        return_pages = []
+        while has_next_page:
+            for page in pages['likes']['data']:
+                w.writerow(processFacebookPageData(page['id'],access_token))
+                return_pages.append(page)
+                # output progress occasionally to make sure code is not stalling
+                num_processed += 1
+                if num_processed % 1000 == 0:
+                    print "%s Statuses Processed: %s" % (num_processed, datetime.datetime.now())
+
+            # if there is no next page, we're done.
+            if 'paging' in pages['likes'].keys():
+                if 'next' in pages['likes']['paging'].keys():
+                    pages['likes'] = json.loads(request_until_succeed(pages['likes']['paging']['next']))
+                else:
+                    has_next_page = False
+            else:
+                has_next_page = False
+
+
+
+        print "\nDone!\n%s Likes Processed in %s" % (num_processed, datetime.datetime.now() - scrape_starttime)
+        return return_pages
+
+# helper functions
+def checkExistence(dict, key):
+    # helper function to check if key exists in dict and return 'NA' if not
+    return 'NA' if key not in dict.keys() else dict[key]
+
+def request_until_succeed(url):
+    # request access to server using url
+    # helper function to catch error and try again after a few seconds
+    req = urllib2.Request(url)
+    success = False
+    while success is False:
+        try:
+            response = urllib2.urlopen(req)
+            if response.getcode() == 200:
+                success = True
+        except Exception, e:
+            print e
+            # wait a bit and try it again
+            time.sleep(5)
+
+            print "Error for URL %s: %s" % (url, datetime.datetime.now())
+
+    return response.read()
+
+
+
+if __name__ == '__main__':
+    # fill list with page ids to process
+    page_ids = ["bristolarchives","GlasgowCityArchives",
+               "stadtarchivduesseldorf","StadtarchivMuenchen"]
+    # in case german umlaute use the numeric id
+    mannheim = "168701373143130"
+    birmingham = "120724551367002"
+
+    # append german ids to the page_ids list
+    page_ids.append(mannheim)
+    page_ids.append(birmingham)
+
+    # process list and scrape
+    for page_id in page_ids:
+        statuses = scrapeFacebookPageFeedStatus(page_id, access_token)
+
+    for page_id in page_ids:
+        liked_pages = scrapeLikedPagesOfPage(page_id, access_token)
 

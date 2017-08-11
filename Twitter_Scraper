@@ -15,7 +15,7 @@ import time
 from tqdm import tqdm
 
 
-# Store twitter credentials to later access in code
+# store twitter credentials to later access in code
 
 # Twitter API credentials
 consumer_key = ''
@@ -25,17 +25,17 @@ access_secret = ''
 
 
 def get_all_tweets(screen_name):
-    # here the script connects to the twitter server and authorizes with the credentials defined above
-    # note tweepy is the packages that does this for us
+    # here the script connects to the Twitter server and authorises with the credentials defined above
+    # note tweepy is the package that does this for us
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_secret)
     api = tweepy.API(auth)
-    # note api is the object on which we can communicate with the twitter server now
+    # note api is the object on which we can communicate with the Twitter server now
 
-    # what comes now is mainly based on http://tkang.blogspot.ch/2011/01/tweepy-twitter-api-status-object.html
+    # the following is mainly based on http://tkang.blogspot.ch/2011/01/tweepy-twitter-api-status-object.html
     # until stated otherwise
 
-    # initialize a list to hold all the tweepy Tweets
+    # initialise a list to hold all the tweepy tweets
     alltweets = []
 
     # make initial request for most recent tweets (200 is the maximum allowed count)
@@ -82,8 +82,7 @@ def get_all_tweets(screen_name):
             else:
                 replied_to_text = "NA";
 
-            # here all the attributes are saved, this is where I did most of the changes in order to get
-            # the attributes you needed
+            # here all the attributes are saved
 
             tweetData = [tweet.id_str,
                          tweet.created_at,
@@ -124,7 +123,7 @@ def get_all_tweets(screen_name):
         except StopIteration:
             break
 
-    # here the data that is currently saved in the memory (RAM) is written to a csv file
+    # here the data, which is currently saved in the memory (RAM), is written to a csv file
     with open('%s_tweets.csv' % screen_name, 'wb') as f:
         writer = csv.writer(f,delimiter='\t')
         # this is written once for the toprow, the header
@@ -139,7 +138,7 @@ def get_all_tweets(screen_name):
     pass
 
 def get_all_friends(screen_name):
-        # authorization
+        # authorisation
         auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
         auth.set_access_token(access_token, access_secret)
         api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
@@ -197,7 +196,7 @@ def get_all_friends(screen_name):
 
 
 def get_info_list(list):
-    # authorization
+    # authorisation
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_secret)
     api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
@@ -241,7 +240,7 @@ def get_info_list(list):
     return not_found
 
 def get_all_favorites(screen_name):
-    # authorization
+    # authorisation
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_secret)
     api = tweepy.API(auth)
@@ -250,20 +249,20 @@ def get_all_favorites(screen_name):
     try:
         user = api.lookup_users(screen_names=[screen_name])
         # choose first occurrence of user in list
-        # TODO error handling case multiple users found
+        # TODO error handling in case multiple users found
         user = user[0]
     except:
-        # TODO error handling case no user found
+        # TODO error handling in case no user found
         print('screen name not found')
 
 
 
     outtweets = []
-    #TODO show max favorites here
+    #TODO show max favourites here
     for page in tqdm(tweepy.Cursor(api.favorites, id=user.id, wait_on_rate_limit=True,
                               wait_on_rate_limit_notify=True, count=20).pages()):
         for tweet in tqdm(page):
-            #TODO is there another way to get full text? (since api.statuses_lookup does not reuturn full text)
+            #TODO is there another way to get full text? (since api.statuses_lookup does not return full text)
             if tweet.in_reply_to_status_id:
                 try:
                     replied_to_text = api.get_status(tweet.in_reply_to_status_id,tweet_mode='extended').full_text
@@ -328,28 +327,28 @@ if __name__ == '__main__':
     # list of accounts to process
     scrap_these_accounts = ["GC_Archives", "bristolarchives", "TheIronRoom", "isg_mannheim", "StadtA_Muenchen"]
 
-    # here the function that gets all the tweets is called
+    # here is function called which that gets all the tweets
     # the for loop loops over all entries of scrap_these_accounts
     for account in tqdm(scrap_these_accounts):
-        # print is an easy way to give a feedback to the user of what the program is doing at the moment
+        # print is an easy way to give feedback to the user of what the program is currently doing
         print('fetching: ')
         print(account)
-        # thats the actual function call of the function defined above
+        # this is the actual function call of the function defined above
         get_all_tweets(account)
 
-    # here the function that gets all the friends is called, again as above, for every entrie in scrap_these_accountws
+    # here is the function called which gets all the friends. as above, every entry in scrap_these_accounts
     for account in tqdm(scrap_these_accounts):
         print('Getting friends of: ' + str(account))
         get_all_friends(account);
 
-    # here the function that gets all favorites of an account is called, rest same as above
+    # here is the function called which gets all favourites of an account, rest same as above
     for account in tqdm(scrap_these_accounts):
         print('Getting favorites of: ' + str(account))
         get_all_favorites(account);
 
-    # here the function that gets specific info of a specific account is called
+    # here is the function called which gets specific information of a specific account
     friends_to_get = ['bergfrau11', 'DerExperte', 'BirminghamPride', 'BlaiseMuseum', 'CfDHoH', 'BR24', 'InspireSW1', 'SophiaThakur', 'BM_AG', 'BMT_Photo', 'celsancfest', 'CineRedis', 'thomasjvincent', 'CommunitiesNI', 'digital_danach', 'EDACS_UoB', 'filminuk_BFC', 'BrisFilmOffice', 'WECILBristol', 'TRBLearning', 'historyinmoment', 'HonorsCarolina', 'IbolyaFeher', 'IndiDeol', 'chight', 'VdALVSachsen', 'ArchCentre', 'marks_jodie', 'PippaGoldfinger', 'parteigaenger', 'StadtMuenchen', 'AWM_Muenchen', 'watershed', 'LettFromBaghdad', 'susie_dent', 'DigiWomenM', 'greenspacescot', 'ChrisAFRIN', 'gilliannd', 'NatFedParks', 'ParksAllianceUK', 'FieldsInTrust ', 'DrewBennellick ', 'PlayScotland ', 'GreenFlagAward ', 'Go2PlayScotland ', 'exerciseworks', 'Locallearning', 'stokes_croft', 'VisitSCroft', 'BristolCouncil', 'VisitBristol', 'bristol247 ', 'BristolPost', 'LouiseM_BMT', 'Colston_Hall', 'laura_culture', 'MarvinJRees', 'MrTimDunn', 'archidave', 'RGIArt', 'RoSPA', 'siwiarchiv', 'WobIntosh', 'KarstenKuehnel', 'zauderhaft', 'Berwinkel', 'SZ_Muenchen', 'GreenCityeV', 'EstherWidmann', 'theboysbrigade', 'ArchivesNZ', 'theflyingeditor', 'kwamekweiarmah', 'UHBristolNHS', 'RCNLibraries', 'theRCN', 'unibirmingham', 'uschaefer', 'Alfred996', 'cranlife', 'ARAScot', 'nlskelvinhall', 'LostGlasgow', 'ARTPARKGLASGOW', 'UofGlasgowASC', 'KelvinHall16', 'TheScotsman', 'SoulCityArts', 'AffinitySutton', 'Trueformproject', 'EDACS_UoB', 'frl_anni', 'Thalkirchen', 'GenchatDe', 'SLUBdresden', 'hannover', 'hevmckay', 'JoergKoglin', 'NorthBristolNHS', 'Radio_Arabella', 'RadioArabella', 'Erlkanzler', 'VdALVSachsen', 'EDLC', 'FinzelsReach', 'KerstinKitzmann', 'BridgemanImages', 'WoodbrookeUK', 'uwecurating', 'isaacblease', 'BlackSWNet', 'MadgeDresser', 'EdsonBurton', 'FulbrightSchlrs', 'BristolUni', 'BGALondon', 'UBPnetwork', 'ColourfulHeritage', 'ktaines', 'jacklatimer', 'JoeARWright', 'johanoomen', 'openbeelden', 'JStanggassinger', 'kate_rumbold', 'Planet_History', 'queensparkfc', 'newlanarkwhs', 'MancLibraries', 'MilesTeaCoffee', 'SideGallery', 'StateRecordsSA', 'JackieKayPoet', 'Radical_Glasgow', '_Diffusion', 'Guardian', 'th_schmid', 'mshed', 'ASPolice', 'CaPnetworkUK', 'Kenco_Mojo', 'metpoliceuk', 'WMAWP', 'Thursley', 'muelleroertel', 'sebastian_post', 'BirlinnBooks', 'OxLifeWriting', 'HootsmaRoots', 'BernerOberland', 'GlasPrintStudio']
-    # thats the actual function call, note one can pass a list, also note that the accounts (friends) that can not be found
+    # this is the actual function call. note that one can pass a list, also note that the accounts (friends) that can not be found
     # are returned into not_found and later written to a txt file
     not_found = get_info_list(friends_to_get)
     thefile = open('test.txt', 'w')

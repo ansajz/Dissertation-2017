@@ -44,7 +44,7 @@ def get_all_tweets(screen_name):
     # save most recent tweets
     alltweets.extend(new_tweets)
 
-    # save the id of the oldest tweet less one
+    # save the id of the oldest tweet 
     oldest = alltweets[-1].id - 1
 
     # keep grabbing tweets until there are no tweets left to grab
@@ -57,7 +57,7 @@ def get_all_tweets(screen_name):
         # save most recent tweets
         alltweets.extend(new_tweets)
 
-        # update the id of the oldest tweet less one
+        # update the id of the penultimate tweet
         oldest = alltweets[-1].id - 1
 
         print "...%s tweets downloaded so far" % (len(alltweets))
@@ -249,20 +249,17 @@ def get_all_favorites(screen_name):
     try:
         user = api.lookup_users(screen_names=[screen_name])
         # choose first occurrence of user in list
-        # TODO error handling in case multiple users found
+      
         user = user[0]
     except:
-        # TODO error handling in case no user found
         print('screen name not found')
 
 
 
     outtweets = []
-    #TODO show max favourites here
     for page in tqdm(tweepy.Cursor(api.favorites, id=user.id, wait_on_rate_limit=True,
                               wait_on_rate_limit_notify=True, count=20).pages()):
         for tweet in tqdm(page):
-            #TODO is there another way to get full text? (since api.statuses_lookup does not return full text)
             if tweet.in_reply_to_status_id:
                 try:
                     replied_to_text = api.get_status(tweet.in_reply_to_status_id,tweet_mode='extended').full_text
